@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2f6b40">
+<title>FOOP Tracker — Prototype</title>
+<style>
+  :root{
+    --paper:#f3ede1; --surface:#fffdf7; --surface-2:#f8f2e6;
+    --ink:#2a251d; --ink-soft:#6a6053; --line:#e3d8c4;
+    --leaf:#2f6b40; --leaf-deep:#234f30; --leaf-tint:#e4efe3;
+    --terra:#c65f3a; --terra-tint:#f7e4da;
+    --amber:#c98a17; --amber-tint:#f8edcf;
+    --red:#b23b2e; --blue:#2b6ca3; --gold:#b8860b;
+    --gray:#9a9082; --gray-tint:#eee9df;
+    --shadow:0 2px 10px rgba(60,45,25,.10); --radius:16px;
+    --display:Georgia,'Times New Roman',serif;
+    --ui:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--ui);background:var(--paper);color:var(--ink);font-size:16px;line-height:1.45;padding-bottom:84px;}
+  header{background:linear-gradient(160deg,var(--leaf),var(--leaf-deep));color:#fff;padding:16px 18px;position:sticky;top:0;z-index:30;box-shadow:0 3px 14px rgba(35,79,48,.3);}
+  header .brand{display:flex;align-items:center;gap:10px;}
+  header .leaf-mark{font-size:24px;}
+  header h1{font-family:var(--display);font-size:19px;margin:0;font-weight:700;}
+  header .sub{font-size:12px;opacity:.85;margin-top:2px;}
+  .proto{display:inline-block;background:rgba(255,255,255,.18);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;letter-spacing:.4px;}
+
+  main{padding:16px 14px;max-width:760px;margin:0 auto;}
+  .view{display:none;animation:fade .25s ease;}.view.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  h2.section{font-family:var(--display);font-size:20px;margin:4px 2px 4px;font-weight:700;}
+  .lead{color:var(--ink-soft);font-size:13.5px;margin:0 2px 14px;}
+  .muted{color:var(--ink-soft);}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 16px;margin-bottom:14px;}
+  .group-title{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:16px;font-weight:700;margin:0 0 12px;}
+  .group-title .count{margin-left:auto;font-family:var(--ui);font-size:13px;font-weight:600;color:var(--ink-soft);}
+
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px;box-shadow:var(--shadow);}
+  .kpi .lbl{font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+  .kpi .val{font-family:var(--display);font-size:26px;font-weight:700;margin-top:3px;line-height:1;}
+  .kpi .val small{font-size:14px;color:var(--ink-soft);font-weight:400;}
+  .kpi .bar{height:7px;background:var(--gray-tint);border-radius:6px;margin-top:9px;overflow:hidden;}
+  .kpi .bar i{display:block;height:100%;border-radius:6px;}
+  .kpi .foot{font-size:11.5px;color:var(--ink-soft);margin-top:6px;}
+
+  /* report table */
+  table.report{width:100%;border-collapse:collapse;font-size:14.5px;}
+  table.report th,table.report td{text-align:right;padding:10px 6px;border-bottom:1px solid var(--line);}
+  table.report th:first-child,table.report td:first-child{text-align:left;}
+  table.report thead th{font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-soft);border-bottom:2px solid var(--line);}
+  table.report td.metric{font-weight:600;}
+  table.report tr.spacer td{border:none;height:6px;padding:0;}
+  .tgt{display:inline-block;background:var(--gray-tint);padding:2px 9px;border-radius:20px;font-size:12.5px;font-weight:700;}
+  .tgt.track{background:var(--amber-tint);color:#6b531a;}
+  .tgt.ok{background:var(--leaf-tint);color:var(--leaf-deep);}
+  .tgt.under{background:var(--terra-tint);color:var(--terra);}
+
+  /* generic data tables */
+  table.grid{width:100%;border-collapse:collapse;font-size:14px;}
+  table.grid th,table.grid td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:right;}
+  table.grid th:first-child,table.grid td:first-child{text-align:left;}
+  table.grid thead th{font-size:11.5px;text-transform:uppercase;color:var(--ink-soft);letter-spacing:.3px;}
+  table.grid tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:none;}
+  .scn-bad{color:var(--terra);}.scn-real{color:var(--leaf-deep);font-weight:700;}.scn-good{color:var(--blue);}
+
+  /* buttons & inputs */
+  button{font-family:var(--ui);cursor:pointer;border:none;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--leaf);color:#fff;font-size:15px;font-weight:700;padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{background:var(--surface);color:var(--leaf-deep);border:1.5px solid var(--leaf);box-shadow:none;}
+  .btn.gray{background:var(--gray-tint);color:var(--ink);box-shadow:none;}
+  .btn.sm{font-size:13px;padding:8px 12px;}
+  .btn.full{width:100%;}
+  input,select{font-family:var(--ui);font-size:15px;padding:10px 11px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;}
+  input:focus,select:focus{outline:none;border-color:var(--leaf);}
+  input.cell{padding:7px 8px;text-align:right;}
+  label.field{display:block;margin-bottom:11px;}
+  label.field span{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px;}
+  .row3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:9px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--surface-2);color:var(--ink-soft);}
+  .note{background:var(--amber-tint);border:1px solid #e8d49a;border-radius:11px;padding:10px 12px;font-size:13px;color:#6b531a;margin-bottom:14px;}
+  .note b{color:#523f10;}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;margin:6px 2px 10px;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .legend i{width:14px;height:5px;border-radius:3px;display:inline-block;}
+  .chart-wrap{width:100%;overflow-x:auto;}
+  svg.chart{display:block;width:100%;height:auto;}
+
+  .batch{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;}
+  .batch:first-child{border-top:none;}
+  .batch .x{margin-left:auto;color:var(--terra);font-weight:700;background:none;font-size:18px;padding:0 4px;}
+  .batch .loc{color:var(--ink-soft);font-size:12.5px;}
+
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--surface);border-top:1px solid var(--line);display:flex;box-shadow:0 -3px 14px rgba(60,45,25,.08);padding-bottom:env(safe-area-inset-bottom);}
+  nav.tabs button{flex:1;background:none;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink-soft);font-size:10.5px;font-weight:600;}
+  nav.tabs button .ic{font-size:20px;}
+  nav.tabs button.active{color:var(--leaf);}
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:200;background:var(--ink);color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s;}
+  .toast.show{opacity:1;}
+  /* role chip */
+  .rolechip{margin-left:auto;background:rgba(255,255,255,.18);color:#fff;font-size:12px;font-weight:700;padding:6px 11px;border-radius:20px;}
+  /* lock screen */
+  .lock{position:fixed;inset:0;z-index:300;background:linear-gradient(160deg,var(--leaf),var(--leaf-deep));display:flex;align-items:center;justify-content:center;padding:20px;}
+  .lock.hidden{display:none;}
+  .lockcard{background:var(--surface);border-radius:22px;padding:26px 22px;max-width:400px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.3);}
+  .lockleaf{font-size:40px;}
+  .lockcard h2{font-family:var(--display);margin:6px 0 2px;font-size:24px;color:var(--leaf-deep);}
+  .lockp{color:var(--ink-soft);font-size:14px;margin:2px 0 18px;}
+  .rolebtns{display:flex;flex-direction:column;gap:11px;}
+  .rolebtns button{background:var(--surface-2);border:1.5px solid var(--line);border-radius:14px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:2px;}
+  .rolebtns button b{font-size:16px;}.rolebtns button small{color:var(--ink-soft);font-size:12.5px;}
+  .rolebtns button:active{border-color:var(--leaf);}
+  .pinarea{display:none;}
+  .pinerr{color:var(--red);font-size:13px;font-weight:600;min-height:18px;margin-top:6px;}
+  .demo{font-size:11.5px;color:var(--ink-soft);margin-top:18px;background:var(--amber-tint);padding:8px;border-radius:10px;}
+  /* sales sub-tabs */
+  .subtabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .subtabs button{background:var(--surface);border:1.5px solid var(--line);border-radius:20px;padding:8px 14px;font-size:13.5px;font-weight:700;color:var(--ink-soft);}
+  .subtabs button.on{background:var(--leaf);color:#fff;border-color:var(--leaf);}
+  .subview{display:none;}.subview.on{display:block;}
+  .best{background:var(--leaf-tint)!important;color:var(--leaf-deep);font-weight:700;border-radius:6px;}
+  .sale-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px;}
+  .sale-row:first-child{border-top:none;}
+  .sale-row .x{margin-left:auto;color:var(--terra);font-weight:700;background:none;font-size:17px;}
+  .mkt-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--surface-2);}
+  .autolost{background:var(--terra-tint);border:1px solid #e6c0ae;border-radius:11px;padding:10px 12px;font-size:13px;color:#7a3a20;margin-top:10px;}
+  .autolost b{font-size:15px;}
+  .bm-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);}
+  .bm-row:first-child{border-top:none;}
+  .bm-row .crop{font-weight:700;flex:1;font-size:14.5px;}
+  .bm-row .win{background:var(--leaf-tint);color:var(--leaf-deep);font-weight:700;font-size:13px;padding:4px 11px;border-radius:20px;}
+  .bm-row .amt{font-size:12.5px;color:var(--ink-soft);min-width:74px;text-align:right;}
+  .vpill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--amber-tint);color:#6b531a;}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="leaf-mark">🌿</span>
+    <div><h1>FOOP Tracker <span class="proto">PROTOTYPE</span></h1>
+    <div class="sub">Greenhouse &amp; garden — Sierra Leone</div></div>
+    <button id="roleChip" class="rolechip" onclick="lockApp()">🔒 <span id="roleName"></span></button>
+  </div>
+</header>
+
+<!-- ===================== ROLE LOCK SCREEN ===================== -->
+<div class="lock" id="lock">
+  <div class="lockcard">
+    <div class="lockleaf">🌿</div>
+    <h2>FOOP Tracker</h2>
+    <p class="lockp" id="lockPrompt">Who is using the app?</p>
+    <div class="rolebtns" id="roleBtns">
+      <button onclick="pickRole('field')"><b>🌱 Field</b><small>Log plants &amp; harvest</small></button>
+      <button onclick="pickRole('sales')"><b>💵 Sales</b><small>Record sales &amp; prices</small></button>
+      <button onclick="pickRole('manager')"><b>⭐ Manager</b><small>Karen &amp; Calvin — everything</small></button>
+    </div>
+    <div class="pinarea" id="pinArea">
+      <p class="lockp">Enter PIN for <b id="pinRole"></b></p>
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="••••" style="text-align:center;letter-spacing:6px;font-size:22px;">
+      <div class="pinerr" id="pinErr"></div>
+      <div class="row2" style="margin-top:12px;">
+        <button class="btn gray" onclick="backRole()">Back</button>
+        <button class="btn" onclick="submitPin()">Enter</button>
+      </div>
+    </div>
+    <p class="demo" id="demoPins">Demo PINs — Field <b>1234</b> · Sales <b>2345</b> · Manager <b>9999</b></p>
+  </div>
+</div>
+
+<main>
+  <!-- ===================== DASHBOARD ===================== -->
+  <section class="view active" id="v-dash">
+    <h2 class="section">Dashboard</h2>
+    <p class="lead">Summary for donor &amp; CEO reporting — <span id="weekLabel"></span></p>
+    <div class="kpis" id="kpiCards"></div>
+    <div class="card">
+      <div class="group-title">📋 Reporting metrics</div>
+      <table class="report" id="reportTable"></table>
+    </div>
+    <div class="card">
+      <div class="group-title">📈 Weekly harvest (actual, kg)</div>
+      <div class="chart-wrap" id="dashChart"></div>
+    </div>
+  </section>
+
+  <!-- ===================== DATA INPUT ===================== -->
+  <section class="view" id="v-input">
+    <h2 class="section">Data Input</h2>
+    <p class="lead">Everything else is built from what you enter here. Keep it quick.</p>
+
+    <div class="card">
+      <div class="group-title">🌱 Plant batches <span class="count" id="batchCount"></span></div>
+      <p class="muted" style="font-size:13px;margin:-4px 0 12px;">How many plants of each crop, by location. <b>Tap a batch</b> to record dead plants — the loss is counted automatically for that week.</p>
+      <div id="batchList"></div>
+      <div class="row3" style="margin-top:12px;">
+        <label class="field"><span>Crop</span><select id="b_crop"></select></label>
+        <label class="field"><span>Location</span><select id="b_loc"></select></label>
+        <label class="field"><span># Plants</span><input id="b_plants" type="number" inputmode="numeric" placeholder="100"></label>
+      </div>
+      <label class="field"><span>Date planted</span><input id="b_date" type="date"></label>
+      <button class="btn full sm" onclick="addBatch()">＋ Add batch</button>
+    </div>
+
+    <div class="card">
+      <div class="group-title">🧺 This week's record</div>
+      <label class="field"><span>Week (Monday)</span><input id="w_date" type="date"></label>
+      <p class="muted" style="font-size:12.5px;margin:-4px 0 10px;">Harvest in kg, per crop currently growing:</p>
+      <div id="harvestInputs"></div>
+      <div class="autolost" id="autoLost"></div>
+      <div class="row2" style="margin-top:10px;">
+        <label class="field"><span>New nursed</span><input id="w_nursed" type="number" inputmode="numeric" placeholder="0"></label>
+        <label class="field"><span>Transplanted</span><input id="w_trans" type="number" inputmode="numeric" placeholder="0"></label>
+      </div>
+      <button class="btn full sm" onclick="saveWeek()">💾 Save week</button>
+    </div>
+  </section>
+
+  <!-- ===================== ESTIMATIONS ===================== -->
+  <section class="view" id="v-est">
+    <h2 class="section">Estimations</h2>
+    <p class="lead">Total expected production from the plants in the ground (nursery excluded), in 3 scenarios.</p>
+    <div class="note">⚠️ <b>Yields adjusted for Sierra Leone.</b> MASTER's values were optimistic (greenhouse-ideal). These are lowered for real field conditions with pest/disease pressure — better to under-promise to donors. Tap any number to edit.</div>
+    <div class="card">
+      <div class="group-title">📊 Estimated harvest (kg)</div>
+      <div class="chart-wrap"><table class="grid" id="estTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="group-title">⚖️ Yield assumptions (kg per plant)</div>
+      <div class="chart-wrap"><table class="grid" id="yieldTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ===================== HARVEST ===================== -->
+  <section class="view" id="v-harv">
+    <h2 class="section">Harvest</h2>
+    <p class="lead">What we could harvest (3 scenarios) vs what we are actually harvesting.</p>
+    <div class="kpis" id="harvKpis"></div>
+    <div class="card">
+      <div class="group-title">📈 Harvest per week — projection vs actual</div>
+      <div class="legend">
+        <span><i style="background:var(--terra)"></i>Bad</span>
+        <span><i style="background:var(--leaf)"></i>Realistic</span>
+        <span><i style="background:var(--blue)"></i>Good</span>
+        <span><i style="background:var(--gold);height:11px;width:11px;border-radius:50%"></i>Actual harvested</span>
+      </div>
+      <div class="chart-wrap" id="harvChart"></div>
+      <p class="muted" style="font-size:12px;margin-top:8px;">Each batch's total is spread across its harvest window (start = planting date + weeks to first harvest). Gold dots = what was really picked.</p>
+    </div>
+    <div class="card">
+      <div class="group-title">🌱 By crop</div>
+      <p class="muted" style="font-size:12.5px;margin:-4px 0 6px;">One mini-chart per crop — projection (bad/realistic/good) vs actual picked.</p>
+      <div id="harvByCrop"></div>
+    </div>
+  </section>
+
+  <!-- ===================== SALES ===================== -->
+  <section class="view" id="v-sales">
+    <h2 class="section">Sales</h2>
+    <p class="lead">Real market sales — recorded per transaction (NLE).</p>
+    <div class="subtabs">
+      <button id="st-ledger" class="on" onclick="subGo('ledger')">🧾 Sales record</button>
+      <button id="st-prices" onclick="subGo('prices')">🏷️ Market prices</button>
+      <button id="st-scen" onclick="subGo('scen')" style="display:none">📊 Scenarios</button>
+    </div>
+
+    <!-- LEDGER -->
+    <div class="subview on" id="sv-ledger">
+      <div class="kpis" id="salesKpis"></div>
+      <div class="card">
+        <div class="group-title">🏆 Best market for each crop</div>
+        <p class="muted" style="font-size:12.5px;margin:-4px 0 10px;">Highest net price per kg after transport — where to take each crop.</p>
+        <div id="bestMarket"></div>
+      </div>
+      <div class="card">
+        <div class="group-title">➕ Record a sale</div>
+        <div class="row3">
+          <label class="field"><span>Date</span><input id="s_date" type="date"></label>
+          <label class="field"><span>Market</span><select id="s_market"></select></label>
+          <label class="field"><span>Vegetable</span><select id="s_veg"></select></label>
+        </div>
+        <div class="row3">
+          <label class="field"><span>Delivered (kg)</span><input id="s_deliv" type="number" inputmode="decimal" placeholder="0"></label>
+          <label class="field"><span>Sold (kg)</span><input id="s_sold" type="number" inputmode="decimal" placeholder="0"></label>
+          <label class="field"><span>Price NLE/kg</span><input id="s_price" type="number" inputmode="decimal" placeholder="auto"></label>
+        </div>
+        <p class="muted" style="font-size:12px;margin:-4px 0 10px;">Transport is added automatically from the market. Net = revenue − transport. Spoilage = delivered − sold.</p>
+        <div class="row2">
+          <label class="field"><span>🎟️ Voucher / tracking no.</span><input id="s_voucher" type="text" placeholder="e.g. V-0042"></label>
+          <label class="field"><span>Notes (optional)</span><input id="s_notes" type="text" placeholder="e.g. some spoilage in transit"></label>
+        </div>
+        <button class="btn full sm" onclick="addSale()">💾 Save sale</button>
+      </div>
+      <div class="card">
+        <div class="group-title">🧾 Recent sales <span class="count" id="saleCount"></span></div>
+        <div id="saleList"></div>
+      </div>
+      <div class="card">
+        <div class="group-title">📈 Net revenue by crop (NLE)</div>
+        <div class="chart-wrap" id="salesChart"></div>
+      </div>
+    </div>
+
+    <!-- PRICES -->
+    <div class="subview" id="sv-prices">
+      <div class="note">💬 <b>Editable market prices (NLE/kg).</b> Update when your sales colleague sends the survey. 0 = not sold there.</div>
+      <div class="card">
+        <div class="group-title">🏷️ Prices by market</div>
+        <div class="chart-wrap"><table class="grid" id="priceTable"></table></div>
+      </div>
+      <div class="card">
+        <div class="group-title">🚚 Transport cost (NLE per kg delivered)</div>
+        <div class="chart-wrap"><table class="grid" id="transportTable"></table></div>
+      </div>
+    </div>
+
+    <!-- SCENARIOS (manager only) -->
+    <div class="subview" id="sv-scen">
+      <div class="note">🔒 <b>Manager view (Karen &amp; Calvin).</b> For each sale, what you'd earn (net, after transport) in each market — to spot the best place to sell.</div>
+      <div class="card">
+        <div class="group-title">🏆 Best market — how often each wins</div>
+        <div class="chart-wrap" id="bestChart"></div>
+      </div>
+      <div class="card">
+        <div class="group-title">📋 Average net per kg by market &amp; crop</div>
+        <p class="muted" style="font-size:12.5px;margin:-4px 0 10px;">Green = best market for that crop. "—" = not sold there.</p>
+        <div class="chart-wrap"><table class="grid" id="scenTable"></table></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button class="active" id="nav-dash" data-v="dash" onclick="go('dash')"><span class="ic">📊</span>Dashboard</button>
+  <button id="nav-input" data-v="input" onclick="go('input')"><span class="ic">✏️</span>Data</button>
+  <button id="nav-est" data-v="est" onclick="go('est')"><span class="ic">⚖️</span>Estimate</button>
+  <button id="nav-harv" data-v="harv" onclick="go('harv')"><span class="ic">🧺</span>Harvest</button>
+  <button id="nav-sales" data-v="sales" onclick="go('sales')"><span class="ic">💵</span>Sales</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   ⚙️  SETTINGS  —  EDIT THIS BLOCK
+   ------------------------------------------------------------
+   • PINS: the login PIN for each role. Change the numbers.
+   • SHOW_DEMO_PINS: true shows the PIN hint on the lock screen
+     (handy for demos). Set to false for the real/deployed app.
+   • TARGETS: the dashboard goals for plants.
+   ============================================================ */
+const PINS = { field: "1234", sales: "2345", manager: "9999" };
+const SHOW_DEMO_PINS = false;
+const TARGETS = { prod: 350, nursery: 175 };
+/* ========================= END SETTINGS ==================== */
+
+/* ============ CROP DATA (timing + yields adjusted for Sierra Leone) ============ */
+const CROPS = {
+  "Tomato":{emoji:"🍅",first:9,window:8,kg:{bad:1.5,real:3.5,good:5.5},price:18,group:"Tomato"},
+  "Hot Pepper":{emoji:"🌶️",first:10,window:12,kg:{bad:0.5,real:1.2,good:2.5},price:35,group:"Pepper"},
+  "African Hot Pepper":{emoji:"🌶️",first:10,window:12,kg:{bad:0.5,real:1.2,good:2.5},price:35,group:"Pepper"},
+  "Habanero":{emoji:"🌶️",first:11,window:12,kg:{bad:0.4,real:1.0,good:2.0},price:45,group:"Pepper"},
+  "Local Hot Pepper":{emoji:"🌶️",first:10,window:18,kg:{bad:0.6,real:1.5,good:3.0},price:40,group:"Pepper"},
+  "Sweet Pepper":{emoji:"🫑",first:10,window:12,kg:{bad:0.8,real:1.8,good:3.0},price:30,group:"Pepper"},
+  "Eggplant":{emoji:"🍆",first:9,window:10,kg:{bad:1.0,real:2.0,good:3.5},price:15,group:"Other"},
+  "Garden Egg":{emoji:"🥚",first:8,window:14,kg:{bad:1.2,real:2.5,good:4.0},price:18,group:"Other"},
+  "Cucumber":{emoji:"🥒",first:6,window:6,kg:{bad:1.0,real:2.0,good:3.5},price:15,group:"Other"},
+  "Okra":{emoji:"🌿",first:7,window:12,kg:{bad:0.3,real:0.6,good:1.0},price:20,group:"Other"},
+  "Krain Krain":{emoji:"🥬",first:4,window:16,kg:{bad:0.2,real:0.4,good:0.6},price:12,group:"Other"},
+  "Carrot":{emoji:"🥕",first:11,window:3,kg:{bad:0.05,real:0.1,good:0.15},price:22,group:"Other"},
+  "Cabbage":{emoji:"🥬",first:11,window:3,kg:{bad:0.4,real:0.8,good:1.2},price:14,group:"Other"}
+};
+const LOCS=["Greenhouse 1","Greenhouse 2","Outdoor","Nursery"];
+const CUR="NLE";
+const DAY=86400000;
+
+/* ============ SALES CONFIG ============ */
+const MARKETS=["TormaBum","Bo","Waterloo"];
+const SALES_CROPS=["Tomato","Local Hot Pepper","Habanero Hot Pepper","Garden Eggs","Eggplant","Okra","Cucumber","Carrot","Krainkrain","Cabbage","Green Pepper"];
+// Market prices NLE/kg (from FOOP market survey; 0 = not sold there)
+const PRICES0={
+  "TormaBum":{"Tomato":13.6,"Okra":26.5,"Local Hot Pepper":36.8,"Habanero Hot Pepper":42.7,"Carrot":27.3,"Cucumber":7.0,"Garden Eggs":1.8,"Eggplant":2.3,"Krainkrain":10,"Cabbage":0,"Green Pepper":0},
+  "Bo":{"Tomato":0,"Okra":52.9,"Local Hot Pepper":51.5,"Habanero Hot Pepper":102.3,"Carrot":0,"Cucumber":5.9,"Garden Eggs":12.8,"Eggplant":0,"Krainkrain":14,"Cabbage":0,"Green Pepper":0},
+  "Waterloo":{"Tomato":0,"Okra":0,"Local Hot Pepper":73.5,"Habanero Hot Pepper":85.5,"Carrot":0,"Cucumber":23.5,"Garden Eggs":20.1,"Eggplant":0,"Krainkrain":20,"Cabbage":0,"Green Pepper":212.8}
+};
+// Transport NLE per kg delivered (TormaBum is home = 0)
+const TRANSPORT0={"TormaBum":0,"Bo":3.5,"Waterloo":7.6};
+
+/* ============ ROLES (PINs & targets are set in the SETTINGS block at the top) ============ */
+const ROLES={
+  field:{label:"Field",pin:PINS.field,tabs:["dash","input","est","harv"],sales:false,scenarios:false},
+  sales:{label:"Sales",pin:PINS.sales,tabs:["dash","sales"],sales:true,scenarios:false},
+  manager:{label:"Manager",pin:PINS.manager,tabs:["dash","input","est","harv","sales"],sales:true,scenarios:true}
+};
+let ROLE=null, pendingRole=null, subTab='ledger';
+
+/* ============ STATE ============ */
+const KEY="foop_v3_proto";
+let S=null;
+function monday(d){d=new Date(d);const day=(d.getDay()+6)%7;d.setHours(0,0,0,0);return new Date(d.getTime()-day*DAY);}
+function iso(d){return new Date(d).toISOString().slice(0,10);}
+function seed(){
+  const m0=monday(new Date());
+  const wk=o=>iso(new Date(m0.getTime()-o*7*DAY));
+  return {
+    targets:{prod:TARGETS.prod,nursery:TARGETS.nursery},
+    prices:Object.fromEntries(Object.entries(CROPS).map(([k,c])=>[k,c.price])),
+    yields:Object.fromEntries(Object.entries(CROPS).map(([k,c])=>[k,{...c.kg}])),
+    batches:[
+      {id:1,crop:"Tomato",loc:"Greenhouse 1",plants:38,date:"2026-02-25"},
+      {id:2,crop:"Hot Pepper",loc:"Greenhouse 1",plants:67,date:"2026-02-20"},
+      {id:3,crop:"Sweet Pepper",loc:"Greenhouse 2",plants:40,date:"2026-02-13"},
+      {id:4,crop:"Hot Pepper",loc:"Greenhouse 2",plants:52,date:"2026-02-20"},
+      {id:5,crop:"Tomato",loc:"Greenhouse 2",plants:30,date:"2026-03-01"},
+      {id:6,crop:"African Hot Pepper",loc:"Outdoor",plants:60,date:"2026-04-23"},
+      {id:7,crop:"Garden Egg",loc:"Outdoor",plants:40,date:"2026-03-15"},
+      {id:8,crop:"Eggplant",loc:"Outdoor",plants:45,date:"2026-03-20"},
+      {id:9,crop:"Tomato",loc:"Nursery",plants:90,date:"2026-05-01"},
+      {id:10,crop:"Hot Pepper",loc:"Nursery",plants:85,date:"2026-05-05"}
+    ],
+    weeks:[
+      {date:wk(5),lost:6,nursed:90,trans:0, h:{"Tomato":30,"Hot Pepper":0}},
+      {date:wk(4),lost:5,nursed:0, trans:20,h:{"Tomato":45,"Hot Pepper":10}},
+      {date:wk(3),lost:3,nursed:30,trans:0, h:{"Tomato":60,"Hot Pepper":18}},
+      {date:wk(2),lost:8,nursed:0, trans:15,h:{"Tomato":70,"Hot Pepper":25}},
+      {date:wk(1),lost:4,nursed:20,trans:0, h:{"Tomato":65,"Hot Pepper":30}},
+      {date:wk(0),lost:2,nursed:0, trans:10,h:{"Tomato":40,"Hot Pepper":22}}
+    ],
+    salePrices:JSON.parse(JSON.stringify(PRICES0)),
+    transport:{...TRANSPORT0},
+    losses:[],
+    sales:[
+      {id:101,date:"2026-04-01",market:"Bo",veg:"Habanero Hot Pepper",deliv:2,sold:2,rev:175},
+      {id:102,date:"2026-04-01",market:"Bo",veg:"Garden Eggs",deliv:5,sold:5,rev:85},
+      {id:103,date:"2026-04-01",market:"Bo",veg:"Eggplant",deliv:11,sold:10.5,rev:44},
+      {id:104,date:"2026-04-01",market:"Bo",veg:"Local Hot Pepper",deliv:3,sold:3,rev:140},
+      {id:105,date:"2026-04-10",market:"TormaBum",veg:"Local Hot Pepper",deliv:1,sold:1,rev:10},
+      {id:106,date:"2026-04-13",market:"TormaBum",veg:"Garden Eggs",deliv:3,sold:2,rev:8},
+      {id:107,date:"2026-04-13",market:"TormaBum",veg:"Eggplant",deliv:5,sold:5,rev:10},
+      {id:108,date:"2026-04-13",market:"TormaBum",veg:"Local Hot Pepper",deliv:2.6,sold:2.6,rev:30},
+      {id:109,date:"2026-04-20",market:"TormaBum",veg:"Garden Eggs",deliv:3,sold:3,rev:10},
+      {id:110,date:"2026-04-20",market:"TormaBum",veg:"Eggplant",deliv:4,sold:2,rev:6},
+      {id:111,date:"2026-04-20",market:"TormaBum",veg:"Habanero Hot Pepper",deliv:1,sold:1,rev:10},
+      {id:112,date:"2026-04-28",market:"TormaBum",veg:"Local Hot Pepper",deliv:1,sold:1,rev:15},
+      {id:113,date:"2026-04-28",market:"TormaBum",veg:"Eggplant",deliv:2.5,sold:2,rev:15},
+      {id:114,date:"2026-05-05",market:"TormaBum",veg:"Eggplant",deliv:2,sold:2,rev:20},
+      {id:115,date:"2026-05-11",market:"TormaBum",veg:"Local Hot Pepper",deliv:1.5,sold:1.5,rev:30},
+      {id:116,date:"2026-05-11",market:"TormaBum",veg:"Garden Eggs",deliv:2,sold:2,rev:15},
+      {id:117,date:"2026-05-22",market:"TormaBum",veg:"Eggplant",deliv:5,sold:5,rev:50},
+      {id:118,date:"2026-05-22",market:"TormaBum",veg:"Local Hot Pepper",deliv:4,sold:4,rev:160},
+      {id:119,date:"2026-05-22",market:"TormaBum",veg:"Garden Eggs",deliv:3.5,sold:3.5,rev:20}
+    ]
+  };
+}
+function load(){try{const r=localStorage.getItem(KEY);S=r?JSON.parse(r):seed();}catch(e){S=seed();}
+  if(!S.losses)S.losses=[]; if(!S.sales)S.sales=[];
+  if(!S.salePrices)S.salePrices=JSON.parse(JSON.stringify(PRICES0));
+  if(!S.transport)S.transport={...TRANSPORT0};}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+/* ============ HELPERS ============ */
+function nf(n,d=0){return (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function prodBatches(){return S.batches.filter(b=>b.loc!=="Nursery");}
+function nurseryCount(){return S.batches.filter(b=>b.loc==="Nursery").reduce((s,b)=>s+(+b.plants||0),0);}
+function prodCount(){return prodBatches().reduce((s,b)=>s+(+b.plants||0),0);}
+function latestWeek(){return S.weeks.length?S.weeks[S.weeks.length-1]:null;}
+function weekHarvestTotal(w){return Object.values(w.h||{}).reduce((s,v)=>s+(+v||0),0);}
+function pepperGroup(crop){return CROPS[crop]?CROPS[crop].group:"Other";}
+
+/* scenario total kg for a crop given plants */
+function estFor(crop,plants,scn){return plants*(S.yields[crop]?S.yields[crop][scn]:0);}
+
+/* weekly projection buckets: returns {labels, bad, real, good, actual, byCrop:{crop:{bad,real,good,actual}}} */
+function projection(){
+  const pb=prodBatches().filter(b=>CROPS[b.crop]);
+  if(!pb.length) return null;
+  let minStart=Infinity,maxEnd=-Infinity;
+  const segs=pb.map(b=>{
+    const c=CROPS[b.crop];
+    const start=monday(new Date(new Date(b.date).getTime()+c.first*7*DAY));
+    const win=c.window;
+    minStart=Math.min(minStart,start.getTime());
+    maxEnd=Math.max(maxEnd,start.getTime()+(win-1)*7*DAY);
+    return {b,c,start:start.getTime(),win};
+  });
+  // include actual weeks range
+  S.weeks.forEach(w=>{const t=monday(new Date(w.date)).getTime();minStart=Math.min(minStart,t);maxEnd=Math.max(maxEnd,t);});
+  const n=Math.round((maxEnd-minStart)/(7*DAY))+1;
+  const labels=[],bad=Array(n).fill(0),real=Array(n).fill(0),good=Array(n).fill(0),actual=Array(n).fill(0);
+  for(let i=0;i<n;i++){const d=new Date(minStart+i*7*DAY);labels.push(d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}));}
+  const byCrop={};
+  const ensure=c=>byCrop[c]||(byCrop[c]={bad:Array(n).fill(0),real:Array(n).fill(0),good:Array(n).fill(0),actual:Array(n).fill(0)});
+  function weights(win){const w=[];let s=0;for(let i=0;i<win;i++){const v=Math.sin(Math.PI*(i+0.5)/win);w.push(v);s+=v;}return w.map(v=>v/s);}
+  segs.forEach(({b,c,start,win})=>{
+    const wts=weights(win); const off=Math.round((start-minStart)/(7*DAY)); const cr=ensure(b.crop);
+    for(let i=0;i<win;i++){const idx=off+i;if(idx<0||idx>=n)continue;
+      const kb=b.plants*S.yields[b.crop].bad*wts[i], kr=b.plants*S.yields[b.crop].real*wts[i], kg=b.plants*S.yields[b.crop].good*wts[i];
+      bad[idx]+=kb;real[idx]+=kr;good[idx]+=kg;
+      cr.bad[idx]+=kb;cr.real[idx]+=kr;cr.good[idx]+=kg;}
+  });
+  S.weeks.forEach(w=>{const idx=Math.round((monday(new Date(w.date)).getTime()-minStart)/(7*DAY));if(idx<0||idx>=n)return;
+    actual[idx]+=weekHarvestTotal(w);
+    Object.entries(w.h||{}).forEach(([c,k])=>{if(!CROPS[c])return;ensure(c).actual[idx]+=(+k||0);});});
+  return {labels,bad,real,good,actual,byCrop};
+}
+
+/* ============ SVG CHART ============ */
+function chart(opts){
+  // opts: {labels, series:[{data,color,type}], yLabel, h}
+  const W=Math.max(560, opts.labels.length*46), H=opts.h||260, pad={l:46,r:14,t:14,b:46};
+  const iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+  let max=0; opts.series.forEach(s=>s.data.forEach(v=>max=Math.max(max,v)));
+  max=max||1; const nice=Math.ceil(max/4)*4||4;
+  const X=i=>pad.l+(opts.labels.length<=1?iw/2:iw*i/(opts.labels.length-1));
+  const Y=v=>pad.t+ih-ih*v/nice;
+  let g=`<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMin meet">`;
+  for(let k=0;k<=4;k++){const v=nice*k/4,y=Y(v);g+=`<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="#e3d8c4" stroke-width="1"/><text x="${pad.l-6}" y="${y+4}" font-size="11" fill="#6a6053" text-anchor="end">${nf(v)}</text>`;}
+  const step=Math.ceil(opts.labels.length/9);
+  opts.labels.forEach((lb,i)=>{if(i%step===0||i===opts.labels.length-1)g+=`<text x="${X(i)}" y="${H-pad.b+18}" font-size="10.5" fill="#6a6053" text-anchor="middle">${lb}</text>`;});
+  opts.series.forEach(s=>{
+    if(s.type==='bar'){const bw=Math.min(26,iw/opts.labels.length*0.6);
+      s.data.forEach((v,i)=>{if(v>0)g+=`<rect x="${X(i)-bw/2}" y="${Y(v)}" width="${bw}" height="${pad.t+ih-Y(v)}" rx="3" fill="${s.color}" opacity="0.9"/>`;});
+    }else if(s.type==='dot'){
+      s.data.forEach((v,i)=>{if(v>0)g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="4.5" fill="${s.color}"/>`;});
+    }else{let p='';s.data.forEach((v,i)=>p+=(i?'L':'M')+X(i)+' '+Y(v)+' ');g+=`<path d="${p}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round"/>`;}
+  });
+  g+=`</svg>`; return g;
+}
+
+/* ============ RENDER DASHBOARD ============ */
+function renderDash(){
+  const lw=latestWeek();
+  document.getElementById('weekLabel').textContent = lw?('week of '+new Date(lw.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})):'no data yet';
+  const showSales = !ROLE || ROLES[ROLE].sales;   // Field role can't see sales figures
+  const pc=prodCount(), nc=nurseryCount();
+  const cumH=S.weeks.reduce((s,w)=>s+weekHarvestTotal(w),0);
+  const lm=lw?monday(new Date(lw.date)).getTime():monday(new Date()).getTime();
+  const cumSales=S.sales.reduce((s,x)=>s+saleNet(x),0);
+  const thisSales=S.sales.filter(x=>saleMonday(x)===lm).reduce((s,x)=>s+saleNet(x),0);
+  function kpi(lbl,val,sub,frac,color){const pct=Math.min(100,Math.round((frac||0)*100));
+    return `<div class="kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div>${frac!=null?`<div class="bar"><i style="width:${pct}%;background:${color}"></i></div>`:''}<div class="foot">${sub}</div></div>`;}
+  document.getElementById('kpiCards').innerHTML=
+    kpi("Plants in production",`${nf(pc)} <small>/ ${S.targets.prod}</small>`,`${pc>=S.targets.prod?'On / above target':'Below target'}`, pc/S.targets.prod, pc>=S.targets.prod?'var(--leaf)':'var(--terra)')
+   +kpi("Plants in nursery",`${nf(nc)} <small>/ ${S.targets.nursery}</small>`,`${nc>=S.targets.nursery?'On / above target':'Below target'}`, nc/S.targets.nursery, nc>=S.targets.nursery?'var(--leaf)':'var(--amber)')
+   +kpi("Harvest to date",`${nf(cumH)} <small>kg</small>`,`Across ${S.weeks.length} weeks logged`,null)
+   +(showSales?kpi("Net sales to date",`${CUR} ${nf(cumSales)}`,`Recorded market sales`,null):'');
+
+  // report table
+  const thisTom = lw?(lw.h&&lw.h["Tomato"]||0):0;
+  const thisPep = lw?Object.entries(lw.h||{}).filter(([c])=>pepperGroup(c)==="Pepper").reduce((a,[,k])=>a+(+k||0),0):0;
+  const cumTom=S.weeks.reduce((s,w)=>s+(w.h&&w.h["Tomato"]||0),0);
+  const cumPep=S.weeks.reduce((s,w)=>s+Object.entries(w.h||{}).filter(([c])=>pepperGroup(c)==="Pepper").reduce((a,[,k])=>a+(+k||0),0),0);
+  const cumLost=S.weeks.reduce((s,w)=>s+(+w.lost||0),0), cumNur=S.weeks.reduce((s,w)=>s+(+w.nursed||0),0), cumTr=S.weeks.reduce((s,w)=>s+(+w.trans||0),0);
+  function tgt(t,ok){return `<span class="tgt ${ok===true?'ok':ok===false?'under':'track'}">${t}</span>`;}
+  const rows=[
+    ["Plants in production",nf(pc),"—",tgt(S.targets.prod, pc>=S.targets.prod)],
+    ["Plants in nursery",nf(nc),"—",tgt(S.targets.nursery, nc>=S.targets.nursery)],
+    ["sp"],
+    ["Plants lost this week",nf(lw?lw.lost:0),nf(cumLost),tgt("Track")],
+    ["New plants nursed",nf(lw?lw.nursed:0),nf(cumNur),tgt("Track")],
+    ["New plants transplanted",nf(lw?lw.trans:0),nf(cumTr),tgt("Track")],
+    ["sp"],
+    ["Tomato harvest (kg)",nf(thisTom),nf(cumTom),tgt("Track")],
+    ["Pepper harvest (kg)",nf(thisPep),nf(cumPep),tgt("Track")]
+  ];
+  if(showSales) rows.push(["Sales ("+CUR+")",nf(thisSales),nf(cumSales),tgt("Track")]);
+  let html=`<thead><tr><th>Metric</th><th>This week</th><th>Cumulative</th><th>Target</th></tr></thead><tbody>`;
+  rows.forEach(r=>{ if(r[0]==="sp"){html+=`<tr class="spacer"><td colspan="4"></td></tr>`;return;}
+    html+=`<tr><td class="metric">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;});
+  html+=`</tbody>`; document.getElementById('reportTable').innerHTML=html;
+
+  // weekly harvest chart
+  const labels=S.weeks.map(w=>new Date(w.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}));
+  const data=S.weeks.map(weekHarvestTotal);
+  document.getElementById('dashChart').innerHTML = chart({labels,h:230,series:[{data,color:'var(--leaf)',type:'bar'}]});
+}
+
+/* ============ RENDER DATA INPUT ============ */
+function slug(s){return String(s).replace(/[^a-z0-9]/gi,'_');}
+function renderInput(){
+  // selects
+  const cs=document.getElementById('b_crop'); if(!cs.options.length){cs.innerHTML=Object.keys(CROPS).map(c=>`<option>${c}</option>`).join('');}
+  const ls=document.getElementById('b_loc'); if(!ls.options.length){ls.innerHTML=LOCS.map(l=>`<option>${l}</option>`).join('');}
+  if(!document.getElementById('b_date').value)document.getElementById('b_date').value=iso(new Date());
+  if(!document.getElementById('w_date').value)document.getElementById('w_date').value=iso(monday(new Date()));
+  document.getElementById('batchCount').textContent=S.batches.length+' batches';
+  document.getElementById('batchList').innerHTML=S.batches.map(b=>{
+    const lost=S.losses.filter(l=>l.batchId===b.id).reduce((s,l)=>s+(+l.n||0),0);
+    const lostTxt=lost?` · <span style="color:var(--terra)">−${nf(lost)} lost</span>`:'';
+    return `<div class="batch" onclick="editBatch(${b.id})" style="cursor:pointer"><span>${CROPS[b.crop]?CROPS[b.crop].emoji:'🌱'} <b>${b.crop}</b> · ${nf(b.plants)} plants${lostTxt}</span><span class="loc">${b.loc} · ${new Date(b.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} ✏️</span></div>`;}).join('');
+  // harvest inputs for crops currently in production
+  const crops=[...new Set(prodBatches().map(b=>b.crop))];
+  document.getElementById('harvestInputs').innerHTML=`<div class="row2">`+crops.map(c=>`<label class="field"><span>${CROPS[c].emoji} ${c} (kg)</span><input id="h_${slug(c)}" type="number" inputmode="decimal" placeholder="0"></label>`).join('')+`</div>`;
+  // auto-counted losses for the selected week
+  const wk=iso(monday(new Date(document.getElementById('w_date').value||new Date())));
+  const wl=lossesForWeek(wk);
+  const detail=S.losses.filter(l=>l.week===wk);
+  document.getElementById('autoLost').innerHTML=`🥀 Plants lost this week: <b>${nf(wl)}</b> — counted automatically from the batches above.`+
+    (detail.length?`<div style="margin-top:6px;font-size:12px">${detail.map(l=>`${l.crop} (${l.loc}): ${nf(l.n)}`).join(' · ')}</div>`:
+     `<div style="margin-top:6px;font-size:12px">Tap a batch above when plants die.</div>`);
+}
+function addBatch(){
+  const crop=document.getElementById('b_crop').value, loc=document.getElementById('b_loc').value,
+    plants=+document.getElementById('b_plants').value||0, date=document.getElementById('b_date').value;
+  if(!plants||!date){toast('Enter plants and date');return;}
+  S.batches.push({id:Date.now(),crop,loc,plants,date}); save(); renderAll(); document.getElementById('b_plants').value='';
+  toast('Batch added');
+}
+function editBatch(id){
+  const b=S.batches.find(x=>x.id===id); if(!b)return;
+  const np=prompt(`${b.crop} — ${b.loc}\nCurrently ${b.plants} plants.\n\nHow many plants DIED / were removed?\n(Enter the number of dead plants. Enter 0 to only fix the count.)`,"0");
+  if(np===null)return;
+  const dead=+np; if(isNaN(dead)||dead<0){toast('Enter a number');return;}
+  if(dead>b.plants){toast('More than the batch has');return;}
+  if(dead>0){
+    const wk=iso(monday(new Date()));
+    b.plants-=dead;
+    S.losses.push({id:Date.now(),batchId:b.id,crop:b.crop,loc:b.loc,n:dead,week:wk,date:iso(new Date())});
+    save();renderAll();toast(`${dead} plants recorded as lost`);
+  }else{
+    const fix=prompt(`No deaths. Correct the plant count to:`,b.plants);
+    if(fix===null)return; const f=+fix; if(isNaN(f)){toast('Enter a number');return;}
+    b.plants=f; save(); renderAll(); toast('Count updated');
+  }
+}
+function delBatch(id){if(!confirm('Delete this whole batch?'))return;S.batches=S.batches.filter(b=>b.id!==id);save();renderAll();toast('Batch deleted');}
+function lossesForWeek(wk){return S.losses.filter(l=>l.week===wk).reduce((s,l)=>s+(+l.n||0),0);}
+function saveWeek(){
+  const date=document.getElementById('w_date').value; if(!date){toast('Pick the week');return;}
+  const crops=[...new Set(prodBatches().map(b=>b.crop))]; const h={};
+  crops.forEach(c=>{const el=document.getElementById('h_'+slug(c)); const v=el?(+el.value||0):0; if(v)h[c]=v;});
+  const wk=iso(monday(new Date(date)));
+  const rec={date:wk,lost:lossesForWeek(wk),nursed:+document.getElementById('w_nursed').value||0,trans:+document.getElementById('w_trans').value||0,h};
+  const i=S.weeks.findIndex(w=>w.date===rec.date); if(i>=0)S.weeks[i]=rec; else S.weeks.push(rec);
+  S.weeks.sort((a,b)=>a.date<b.date?-1:1); save(); renderAll(); toast('Week saved ✓');
+  ['w_nursed','w_trans'].forEach(id=>document.getElementById(id).value='');
+  crops.forEach(c=>{const el=document.getElementById('h_'+slug(c));if(el)el.value='';});
+}
+
+/* ============ RENDER ESTIMATIONS ============ */
+function renderEst(){
+  const byCrop={}; prodBatches().forEach(b=>{byCrop[b.crop]=(byCrop[b.crop]||0)+(+b.plants||0);});
+  let tb=0,tr=0,tg=0;
+  let h=`<thead><tr><th>Crop</th><th>Plants</th><th class="scn-bad">Bad</th><th class="scn-real">Realistic</th><th class="scn-good">Good</th></tr></thead><tbody>`;
+  Object.entries(byCrop).forEach(([c,p])=>{const b=estFor(c,p,'bad'),r=estFor(c,p,'real'),g=estFor(c,p,'good');tb+=b;tr+=r;tg+=g;
+    h+=`<tr><td>${CROPS[c].emoji} ${c}</td><td>${nf(p)}</td><td class="scn-bad">${nf(b)}</td><td class="scn-real">${nf(r)}</td><td class="scn-good">${nf(g)}</td></tr>`;});
+  h+=`</tbody><tfoot><tr><td>Total (kg)</td><td>${nf(prodCount())}</td><td class="scn-bad">${nf(tb)}</td><td class="scn-real">${nf(tr)}</td><td class="scn-good">${nf(tg)}</td></tr></tfoot>`;
+  document.getElementById('estTable').innerHTML=h;
+  // yield assumptions editable
+  let y=`<thead><tr><th>Crop</th><th>First harvest</th><th class="scn-bad">Bad</th><th class="scn-real">Realistic</th><th class="scn-good">Good</th></tr></thead><tbody>`;
+  Object.keys(CROPS).forEach(c=>{const Y=S.yields[c];
+    y+=`<tr><td>${CROPS[c].emoji} ${c}</td><td class="muted">~${CROPS[c].first} wks</td>`+
+      ['bad','real','good'].map(s=>`<td><input class="cell" type="number" step="0.1" value="${Y[s]}" onchange="setYield('${c}','${s}',this.value)" style="width:62px"></td>`).join('')+`</tr>`;});
+  y+=`</tbody>`; document.getElementById('yieldTable').innerHTML=y;
+}
+function setYield(c,s,v){S.yields[c][s]=+v||0;save();renderAll();}
+
+/* ============ RENDER HARVEST ============ */
+function renderHarv(){
+  const byCrop={}; prodBatches().forEach(b=>{byCrop[b.crop]=(byCrop[b.crop]||0)+(+b.plants||0);});
+  let tb=0,tr=0,tg=0; Object.entries(byCrop).forEach(([c,p])=>{tb+=estFor(c,p,'bad');tr+=estFor(c,p,'real');tg+=estFor(c,p,'good');});
+  const cumH=S.weeks.reduce((s,w)=>s+weekHarvestTotal(w),0);
+  function k(lbl,val,color){return `<div class="kpi"><div class="lbl">${lbl}</div><div class="val" style="color:${color}">${val}<small> kg</small></div></div>`;}
+  document.getElementById('harvKpis').innerHTML=
+    k("Actual to date",nf(cumH),'var(--gold)')+k("Realistic potential",nf(tr),'var(--leaf)')+
+    k("Bad scenario",nf(tb),'var(--terra)')+k("Good scenario",nf(tg),'var(--blue)');
+  const pr=projection();
+  if(pr){document.getElementById('harvChart').innerHTML=chart({labels:pr.labels,h:280,series:[
+    {data:pr.bad,color:'var(--terra)',type:'line'},{data:pr.real,color:'var(--leaf)',type:'line'},
+    {data:pr.good,color:'var(--blue)',type:'line'},{data:pr.actual,color:'var(--gold)',type:'dot'}]});
+    // per-crop mini charts
+    let hc='';
+    Object.entries(pr.byCrop).forEach(([c,s])=>{
+      const picked=s.actual.reduce((a,b)=>a+b,0), potR=s.real.reduce((a,b)=>a+b,0);
+      hc+=`<div style="margin:10px 0 4px;font-weight:700;font-size:14px">${CROPS[c]?CROPS[c].emoji:'🌱'} ${c}
+        <span class="muted" style="font-weight:400;font-size:12px"> · picked ${nf(picked)} / ${nf(potR)} kg realistic</span></div>`+
+        chart({labels:pr.labels,h:170,series:[
+          {data:s.bad,color:'var(--terra)',type:'line'},{data:s.real,color:'var(--leaf)',type:'line'},
+          {data:s.good,color:'var(--blue)',type:'line'},{data:s.actual,color:'var(--gold)',type:'dot'}]});
+    });
+    document.getElementById('harvByCrop').innerHTML=hc;
+  }
+  else{document.getElementById('harvChart').innerHTML='<p class="muted">Add plant batches to see the projection.</p>';document.getElementById('harvByCrop').innerHTML='';}
+}
+
+/* ============ SALES HELPERS ============ */
+function saleTransport(sale){return (+sale.deliv||0)*(S.transport[sale.market]||0);}
+function saleNet(sale){return (+sale.rev||0)-saleTransport(sale);}
+function saleMonday(sale){return monday(new Date(sale.date)).getTime();}
+
+/* ============ RENDER SALES (ledger) ============ */
+function renderSales(){
+  // form selects
+  const ms=document.getElementById('s_market'); if(!ms.options.length)ms.innerHTML=MARKETS.map(m=>`<option>${m}</option>`).join('');
+  const vs=document.getElementById('s_veg'); if(!vs.options.length)vs.innerHTML=SALES_CROPS.map(c=>`<option>${c}</option>`).join('');
+  if(!document.getElementById('s_date').value)document.getElementById('s_date').value=iso(new Date());
+  const sales=[...S.sales].sort((a,b)=>a.date<b.date?1:-1);
+  const cumNet=S.sales.reduce((s,x)=>s+saleNet(x),0);
+  const cumKg=S.sales.reduce((s,x)=>s+(+x.sold||0),0);
+  const lm=S.weeks.length?saleMonday({date:S.weeks[S.weeks.length-1].date}):monday(new Date()).getTime();
+  const wkNet=S.sales.filter(x=>saleMonday(x)===lm).reduce((s,x)=>s+saleNet(x),0);
+  function k(lbl,val,color){return `<div class="kpi"><div class="lbl">${lbl}</div><div class="val" style="color:${color};font-size:21px">${val}</div></div>`;}
+  document.getElementById('salesKpis').innerHTML=
+    k("Net sales to date",`${CUR} ${nf(cumNet)}`,'var(--gold)')+
+    k("Kg sold to date",`${nf(cumKg,1)}`,'var(--leaf)');
+  document.getElementById('saleCount').textContent=S.sales.length+' sales';
+  document.getElementById('saleList').innerHTML=sales.slice(0,30).map(x=>{
+    const net=saleNet(x), perkg=(+x.sold)?net/x.sold:0, spoil=(+x.deliv||0)-(+x.sold||0);
+    const spoilTxt=spoil>0.001?` · spoiled ${nf(spoil,1)}kg`:'';
+    const vTxt=x.voucher?` <span class="vpill">🎟️ ${String(x.voucher).replace(/</g,'&lt;')}</span>`:'';
+    const noteTxt=x.notes?`<br><span class="loc">📝 ${String(x.notes).replace(/</g,'&lt;')}</span>`:'';
+    return `<div class="sale-row"><span class="mkt-pill">${x.market}</span>
+      <span><b>${x.veg}</b> · ${nf(x.sold,1)}kg${spoilTxt}${vTxt}<br><span class="loc">${new Date(x.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} · ${CUR} ${nf(net)} net · ${nf(perkg,1)}/kg</span>${noteTxt}</span>
+      <button class="x" onclick="delSale(${x.id})">×</button></div>`;}).join('');
+  // best market per crop (net price per kg after transport)
+  const bm=SALES_CROPS.map(c=>{
+    let best=null,bv=-Infinity,second=-Infinity;
+    MARKETS.forEach(m=>{const p=(S.salePrices[m]&&S.salePrices[m][c])||0;if(!p)return;
+      const net=p-(S.transport[m]||0);
+      if(net>bv){second=bv;bv=net;best=m;}else if(net>second)second=net;});
+    return best?{crop:c,market:best,net:bv,gain:second>-Infinity?bv-second:null}:null;
+  }).filter(Boolean).sort((a,b)=>b.net-a.net);
+  document.getElementById('bestMarket').innerHTML=bm.length?bm.map(x=>
+    `<div class="bm-row"><span class="crop">${x.crop}</span><span class="win">${x.market}</span>
+     <span class="amt">${CUR} ${nf(x.net,1)}/kg${x.gain!=null?`<br><span style="font-size:11px">+${nf(x.gain,1)} vs next</span>`:''}</span></div>`).join('')
+    :'<p class="muted">Add market prices to compare.</p>';
+  // chart: net by crop
+  const byVeg={}; S.sales.forEach(x=>{byVeg[x.veg]=(byVeg[x.veg]||0)+saleNet(x);});
+  const labels=Object.keys(byVeg), data=labels.map(v=>byVeg[v]);
+  document.getElementById('salesChart').innerHTML=labels.length?chart({labels,h:240,series:[{data,color:'var(--gold)',type:'bar'}]}):'<p class="muted">No sales yet.</p>';
+  renderPrices(); renderScenarios();
+}
+function addSale(){
+  const date=document.getElementById('s_date').value,market=document.getElementById('s_market').value,veg=document.getElementById('s_veg').value;
+  const deliv=+document.getElementById('s_deliv').value||0, sold=+document.getElementById('s_sold').value||0;
+  let price=+document.getElementById('s_price').value||0;
+  if(!price)price=(S.salePrices[market]&&S.salePrices[market][veg])||0;
+  if(!sold){toast('Enter kg sold');return;}
+  const rev=sold*price;
+  const notes=document.getElementById('s_notes').value.trim();
+  const voucher=document.getElementById('s_voucher').value.trim();
+  S.sales.push({id:Date.now(),date,market,veg,deliv:deliv||sold,sold,rev,notes,voucher});
+  save();renderAll();toast('Sale saved');
+  ['s_deliv','s_sold','s_price','s_notes','s_voucher'].forEach(id=>document.getElementById(id).value='');
+}
+function delSale(id){S.sales=S.sales.filter(x=>x.id!==id);save();renderAll();toast('Removed');}
+
+/* ============ RENDER PRICES ============ */
+function renderPrices(){
+  let h=`<thead><tr><th>Vegetable</th>${MARKETS.map(m=>`<th>${m}</th>`).join('')}</tr></thead><tbody>`;
+  SALES_CROPS.forEach(c=>{h+=`<tr><td>${c}</td>`+MARKETS.map(m=>{const v=(S.salePrices[m]&&S.salePrices[m][c])||0;
+    return `<td><input class="cell" type="number" step="0.1" value="${v}" onchange="setSalePrice('${m}','${c.replace(/'/g,"\\'")}',this.value)" style="width:58px"></td>`;}).join('')+`</tr>`;});
+  h+=`</tbody>`; document.getElementById('priceTable').innerHTML=h;
+  let t=`<thead><tr><th>Market</th><th>NLE / kg delivered</th></tr></thead><tbody>`;
+  MARKETS.forEach(m=>{t+=`<tr><td>${m}</td><td><input class="cell" type="number" step="0.1" value="${S.transport[m]||0}" onchange="setTransport('${m}',this.value)" style="width:70px"></td></tr>`;});
+  t+=`</tbody>`; document.getElementById('transportTable').innerHTML=t;
+}
+function setSalePrice(m,c,v){if(!S.salePrices[m])S.salePrices[m]={};S.salePrices[m][c]=+v||0;save();renderSales();}
+function setTransport(m,v){S.transport[m]=+v||0;save();renderSales();}
+
+/* ============ RENDER SCENARIOS (manager) ============ */
+function scenNet(crop,soldKg,market){const p=(S.salePrices[market]&&S.salePrices[market][crop])||0;if(!p)return null;return soldKg*(p-(S.transport[market]||0));}
+function renderScenarios(){
+  // best market counts across recorded sales
+  const counts={}; MARKETS.forEach(m=>counts[m]=0);
+  S.sales.forEach(x=>{let best=null,bv=-Infinity;MARKETS.forEach(m=>{const n=scenNet(x.veg,+x.sold||0,m);if(n!=null&&n>bv){bv=n;best=m;}});if(best)counts[best]++;});
+  document.getElementById('bestChart').innerHTML=chart({labels:MARKETS,h:210,series:[{data:MARKETS.map(m=>counts[m]),color:'var(--leaf)',type:'bar'}]});
+  // avg net/kg by crop x market
+  const crops=[...new Set(S.sales.map(x=>x.veg))];
+  let h=`<thead><tr><th>Vegetable</th>${MARKETS.map(m=>`<th>${m}</th>`).join('')}</tr></thead><tbody>`;
+  crops.forEach(c=>{
+    const perkg=MARKETS.map(m=>{const p=(S.salePrices[m]&&S.salePrices[m][c])||0;return p?p-(S.transport[m]||0):null;});
+    const best=Math.max(...perkg.map(v=>v==null?-Infinity:v));
+    h+=`<tr><td>${c}</td>`+perkg.map(v=>v==null?`<td class="muted">—</td>`:`<td class="${v===best?'best':''}">${nf(v,1)}</td>`).join('')+`</tr>`;});
+  h+=`</tbody>`; document.getElementById('scenTable').innerHTML=h;
+}
+
+/* ============ SALES SUB-TABS ============ */
+function subGo(t){subTab=t;['ledger','prices','scen'].forEach(x=>{
+  document.getElementById('sv-'+x).classList.toggle('on',x===t);
+  document.getElementById('st-'+x).classList.toggle('on',x===t);});window.scrollTo(0,0);}
+
+/* ============ ROLES ============ */
+function pickRole(r){pendingRole=r;document.getElementById('roleBtns').style.display='none';
+  document.getElementById('lockPrompt').style.display='none';
+  document.getElementById('pinArea').style.display='block';
+  document.getElementById('pinRole').textContent=ROLES[r].label;
+  document.getElementById('pinErr').textContent='';
+  const pi=document.getElementById('pinInput');pi.value='';pi.focus();}
+function backRole(){pendingRole=null;document.getElementById('roleBtns').style.display='flex';
+  document.getElementById('lockPrompt').style.display='block';
+  document.getElementById('pinArea').style.display='none';}
+function submitPin(){const v=document.getElementById('pinInput').value.trim();
+  if(v===ROLES[pendingRole].pin){ROLE=pendingRole;applyRole();document.getElementById('lock').classList.add('hidden');backRole();}
+  else{document.getElementById('pinErr').textContent='Wrong PIN, try again';document.getElementById('pinInput').value='';}}
+document.getElementById('pinInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitPin();});
+function lockApp(){ROLE=null;document.getElementById('lock').classList.remove('hidden');backRole();}
+function applyRole(){
+  const cfg=ROLES[ROLE];
+  document.getElementById('roleName').textContent=cfg.label;
+  ['dash','input','est','harv','sales'].forEach(t=>{document.getElementById('nav-'+t).style.display=cfg.tabs.includes(t)?'':'none';});
+  document.getElementById('st-scen').style.display=cfg.scenarios?'':'none';
+  if(!cfg.scenarios&&subTab==='scen')subGo('ledger');
+  renderAll();
+  go(cfg.tabs[0]);
+}
+
+/* ============ NAV ============ */
+function go(v){const cfg=ROLE?ROLES[ROLE]:null; if(cfg&&!cfg.tabs.includes(v))v=cfg.tabs[0];
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('v-'+v).classList.add('active');
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));window.scrollTo(0,0);}
+function renderAll(){renderDash();renderInput();renderEst();renderHarv();renderSales();}
+let tT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),1700);}
+
+document.getElementById('w_date').addEventListener('change',renderInput);
+if(!SHOW_DEMO_PINS)document.getElementById('demoPins').style.display='none';
+load();renderAll();
+</script>
+</body>
+</html>
