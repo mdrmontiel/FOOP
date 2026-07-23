@@ -1,0 +1,18 @@
+# Netlify configuration for FOOP Tracker
+# The app is a single static file, so there is nothing to build.
+
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Always serve the app for any path (single page)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
