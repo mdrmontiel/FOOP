@@ -1,0 +1,13 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Local notes / secrets — never commit real keys
+.env
+.env.*
+secrets.txt
